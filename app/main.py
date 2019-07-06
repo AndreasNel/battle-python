@@ -4,6 +4,7 @@ import random
 import bottle
 
 from api import ping_response, start_response, move_response, end_response
+import * from minimax
 
 @bottle.route('/')
 def index():
@@ -39,11 +40,7 @@ def start():
             initialize your snake state here using the
             request's data if necessary.
     """
-    print(json.dumps(data))
-
-    color = "#00FF00"
-
-    return start_response(color)
+    return start_response()
 
 
 @bottle.post('/move')
@@ -54,12 +51,7 @@ def move():
     TODO: Using the data from the endpoint request object, your
             snake AI must choose a direction to move in.
     """
-    print(json.dumps(data))
-
-    directions = ['up', 'down', 'left', 'right']
-    direction = random.choice(directions)
-
-    return move_response(direction)
+    return move_response(minimax.get_move(data))
 
 
 @bottle.post('/end')
@@ -70,8 +62,6 @@ def end():
     TODO: If your snake AI was stateful,
         clean up any stateful objects here.
     """
-    print(json.dumps(data))
-
     return end_response()
 
 # Expose WSGI app (so gunicorn can find it)
@@ -82,5 +72,6 @@ if __name__ == '__main__':
         application,
         host=os.getenv('IP', '0.0.0.0'),
         port=os.getenv('PORT', '8080'),
-        debug=os.getenv('DEBUG', True)
+        debug=os.getenv('DEBUG', True),
+        reloader=True
     )
