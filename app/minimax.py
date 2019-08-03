@@ -7,17 +7,18 @@ import math
 
 DIRECTIONS = {"u": "up", "d": "down", "l": "left", "r": "right"}
 MAX_LEVEL = 5
-X_CHANGE = {"up": 0, "down": 0, "left": -1, "right": 1}
-Y_CHANGE = {"up": -1, "down": 1, "left": 0, "right": 0}
+X_CHANGE = {"u": 0, "d": 0, "l": -1, "r": 1}
+Y_CHANGE = {"u": -1, "d": 1, "l": 0, "r": 0}
 SCORES={"fruit": 10, "empty": 1, "wall": 1, "self": 2, "other_snake_dead": 2, "collision_other": 2, "starve": 1}
 
 def get_move(data):
-    print(json.dumps(data))
     tree = generate_tree(data)
-    tree = evaluate_tree(data, tree)
     with open('tree.json', 'w') as f:
-        f.write(json.dumps(root, indent=2))
-    direction = max(tree.keys(), key=lambda x: tree[x].value)
+        f.write(json.dumps(tree, indent=2))
+    tree = evaluate_tree(data, tree)
+    with open('minmaxtree.json', 'w') as f:
+        f.write(json.dumps(tree, indent=2))
+    direction = max(DIRECTIONS.keys(), key=lambda x: tree[x]["value"])
     return DIRECTIONS[direction]
 
 def generate_tree(data):
@@ -34,7 +35,8 @@ def generate_tree(data):
             current["is_leaf"] = False
         else:
             current[direction] = dict(value=0, is_min=bool((idx+1) % 2), is_leaf=True)
-    return root
+    root.update(dict(value=0, is_min=False, is_leaf=False))
+    return json.loads(json.dumps(root))
 
 def evaluate_tree(data, tree, head=None):
     head = head or data["you"]["body"][0]
@@ -42,16 +44,16 @@ def evaluate_tree(data, tree, head=None):
         if data["you"]["health"] - MAX_LEVEL <= 0:
             tree["value"] = SCORES["starve"] * (data["you"]["health"] - MAX_LEVEL)
             return tree
-        if head["x"] < 0
+        if head["x"] < 0:
             tree["value"] = SCORES["wall"] * head["x"]
             return tree
-        if head["y"] < 0
+        if head["y"] < 0:
             tree["value"] = SCORES["wall"] * head["y"]
             return tree
-        if head["x"] >= data["board"]["width"]
+        if head["x"] >= data["board"]["width"]:
             tree["value"] = -SCORES["wall"] * head["x"]
             return tree
-        if head["y"] >= data["board"]["height"]
+        if head["y"] >= data["board"]["height"]:
             tree["value"] = -SCORES["wall"] * head["y"]
             return tree
         if head in data["you"]["body"]:
@@ -69,6 +71,11 @@ def evaluate_tree(data, tree, head=None):
         tree["value"] = SCORES["empty"]
         return tree
 
-    for direction in DIRECTIONS.keys():
+    assert not tree["is_leaf"], "Leaf node has not actually returned"
+    for direction in [d for d in DIRECTIONS.keys() if tree.get(d)]:
         new_head=dict(x=head["x"] + X_CHANGE[direction], y=head["y"] + Y_CHANGE[direction])
-        
+        evaluate_tree(data, tree[direction], new_head)
+    eval_func = min if tree["is_min"] else max
+    best_direction = eval_func([d for d in DIRECTIONS.keys() if tree.get(d)], key=lambda x: tree[x]["value"])
+    tree["value"] = tree[best_direction]["value"]
+    return tree

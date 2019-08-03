@@ -4,7 +4,7 @@ import random
 import bottle
 
 from api import ping_response, start_response, move_response, end_response
-import * from minimax
+import minimax
 
 @bottle.route('/')
 def index():
